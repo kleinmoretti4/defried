@@ -15,6 +15,14 @@ import genanki
 # Field separator used inside Anki's notes.flds column.
 FIELD_SEP = "\x1f"
 
+FONT_DIR = Path(__file__).parent / "fonts"
+
+# Media file names start with "_" so Anki does not delete them as unused.
+DYSLEXIC_FONT_MEDIA = [
+    FONT_DIR / "_OpenDyslexic-Regular.woff",
+    FONT_DIR / "_OpenDyslexic-Bold.woff",
+]
+
 
 class AnkiError(Exception):
     pass
@@ -122,6 +130,21 @@ DYSLEXIA_CARD_CSS = """
 hr#answer { border: none; border-top: 2px solid #d9c9a3; margin: 16px 0; }
 """
 
+# Variant with the OpenDyslexic typeface bundled into the deck's media.
+DYSLEXIC_FONT_CSS = """
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('_OpenDyslexic-Regular.woff');
+  font-weight: normal;
+}
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('_OpenDyslexic-Bold.woff');
+  font-weight: bold;
+}
+.card { font-family: 'OpenDyslexic', Verdana, Arial, sans-serif; }
+"""
+
 
 def _to_card_html(text: str) -> str:
     return html.escape(text).replace("\n", "<br>")
@@ -131,14 +154,19 @@ def build_apkg(
     deck_name: str,
     cards: list[dict],
     output_path: str,
+    dyslexic_font: bool = False,
 ) -> None:
     """Build a new .apkg with dyslexia-friendly card styling.
 
     ``cards`` is a list of {"front": str, "back": str} dicts (plain text).
+    When ``dyslexic_font`` is set, the OpenDyslexic typeface is embedded
+    in the deck's media and used for the card text.
     """
+    css = DYSLEXIA_CARD_CSS + (DYSLEXIC_FONT_CSS if dyslexic_font else "")
     model = genanki.Model(
-        1607392319,
-        "Sight-Text Dyslexia Friendly",
+        1607392320 if dyslexic_font else 1607392319,
+        "Clarity Dyslexia Friendly"
+        + (" (OpenDyslexic)" if dyslexic_font else ""),
         fields=[{"name": "Front"}, {"name": "Back"}],
         templates=[
             {
@@ -147,7 +175,7 @@ def build_apkg(
                 "afmt": '{{FrontSide}}<hr id="answer"><div class="answer">{{Back}}</div>',
             }
         ],
-        css=DYSLEXIA_CARD_CSS,
+        css=css,
     )
 
     deck = genanki.Deck(abs(hash(deck_name)) % (10**10) + 1, deck_name)
@@ -158,7 +186,10 @@ def build_apkg(
         )
         deck.add_note(note)
 
-    genanki.Package(deck).write_to_file(output_path)
+    package = genanki.Package(deck)
+    if dyslexic_font:
+        package.media_files = [str(p) for p in DYSLEXIC_FONT_MEDIA]
+    package.write_to_file(output_path)
 
 
 def notes_to_cards(parsed: dict) -> list[dict]:

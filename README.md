@@ -1,6 +1,6 @@
-# Sight-Text
+# Clarity
 
-Sight-Text is a web app that takes in documents (.pdf, .docx, .txt or pasted
+Clarity is a web app that takes in documents (.pdf, .docx, .txt or pasted
 text) and Anki decks (.apkg) and converts them to make them more dyslexia
 friendly.
 
@@ -18,6 +18,10 @@ It offers two conversion pathways:
 Documents can be read in an accessible in-browser reader or downloaded as a
 reformatted PDF. Anki decks are rebuilt as a new `.apkg` with
 dyslexia-friendly card styling.
+
+A site-wide toggle switches the interface — and the downloaded PDF or
+`.apkg` — to the OpenDyslexic typeface for readers who prefer it (the font
+is embedded in both download formats).
 
 ## Stack
 
@@ -67,7 +71,7 @@ The app deploys as **two Vercel projects** from this one repo.
 2. Add the `GEMINI_API_KEY` environment variable (needed for Full
    Transformation).
 3. Deploy, and note the deployment URL (e.g.
-   `https://sight-text-api.vercel.app`).
+   `https://clarity-api.vercel.app`).
 
 `backend/vercel.json` sets `maxDuration: 120` so long Gemini rewrites don't
 time out, and `.python-version` pins Python 3.12.
