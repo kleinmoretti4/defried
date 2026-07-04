@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+import base64
+import os
 import tempfile
-import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
 
 from .anki import AnkiError, build_apkg, notes_to_cards, read_apkg
 from .extract import ExtractionError, blocks_from_plain_text, extract_blocks
@@ -28,11 +28,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Converted Anki decks are staged here for download, keyed by token.
-DOWNLOAD_DIR = Path(tempfile.gettempdir()) / "sight-text-downloads"
-DOWNLOAD_DIR.mkdir(exist_ok=True)
-
-MAX_UPLOAD_BYTES = 40 * 1024 * 1024
+# Vercel Functions cap request bodies at ~4.5 MB, so enforce the same limit
+# everywhere for consistent behavior between local dev and production.
+MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 
 
 def _check_mode(mode: str) -> str:
@@ -44,16 +42,35 @@ def _check_mode(mode: str) -> str:
 async def _read_upload(file: UploadFile) -> bytes:
     data = await file.read()
     if len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail="File is too large (40 MB max).")
+        raise HTTPException(status_code=413, detail="File is too large (4 MB max).")
     if not data:
         raise HTTPException(status_code=422, detail="Uploaded file is empty.")
     return data
 
 
+def _inline_download(data: bytes, filename: str, media_type: str) -> dict:
+    """Package a generated file directly into the JSON response.
+
+    The app runs as a serverless function on Vercel, so files written to
+    disk in one request are not reliably available to a later download
+    request. Returning the bytes inline avoids any cross-request state.
+    """
+    return {
+        "filename": filename,
+        "media_type": media_type,
+        "data_b64": base64.b64encode(data).decode("ascii"),
+    }
+
+
+def _safe_name(title: str) -> str:
+    return (
+        "".join(c if c.isalnum() or c in "-_ " else "" for c in title).strip()
+        or "document"
+    )
+
+
 @app.get("/api/health")
 def health() -> dict:
-    import os
-
     return {
         "status": "ok",
         "gemini_configured": bool(
@@ -91,13 +108,17 @@ async def convert_document(
         except GeminiError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    token = _stage_pdf(blocks, title)
+    pdf_bytes = build_pdf(blocks)
     return {
         "kind": "document",
         "mode": mode,
         "title": title,
         "blocks": blocks,
-        "download_url": f"/api/download/{token}",
+        "download": _inline_download(
+            pdf_bytes,
+            f"{_safe_name(title)}-dyslexia-friendly.pdf",
+            "application/pdf",
+        ),
     }
 
 
@@ -131,10 +152,10 @@ async def convert_anki(
     )
     new_name = f"{deck_name} (dyslexia friendly)"
 
-    token = uuid.uuid4().hex
-    out_path = DOWNLOAD_DIR / f"{token}.apkg"
-    build_apkg(new_name, cards, str(out_path))
-    (DOWNLOAD_DIR / f"{token}.name").write_text(f"{Path(file.filename).stem}-dyslexia-friendly.apkg")
+    with tempfile.TemporaryDirectory() as tmp:
+        out_path = Path(tmp) / "deck.apkg"
+        build_apkg(new_name, cards, str(out_path))
+        apkg_bytes = out_path.read_bytes()
 
     return {
         "kind": "anki",
@@ -142,34 +163,9 @@ async def convert_anki(
         "deck_name": new_name,
         "card_count": len(cards),
         "preview": cards[:20],
-        "download_url": f"/api/download/{token}",
+        "download": _inline_download(
+            apkg_bytes,
+            f"{_safe_name(Path(file.filename).stem)}-dyslexia-friendly.apkg",
+            "application/octet-stream",
+        ),
     }
-
-
-def _stage_pdf(blocks: list[dict], title: str) -> str:
-    token = uuid.uuid4().hex
-    pdf_bytes = build_pdf(blocks)
-    (DOWNLOAD_DIR / f"{token}.pdf").write_bytes(pdf_bytes)
-    safe = "".join(c if c.isalnum() or c in "-_ " else "" for c in title).strip() or "document"
-    (DOWNLOAD_DIR / f"{token}.name").write_text(f"{safe}-dyslexia-friendly.pdf")
-    return token
-
-
-@app.get("/api/download/{token}")
-def download(token: str):
-    if not token.isalnum():
-        raise HTTPException(status_code=404, detail="Not found.")
-    for suffix, media_type in (
-        (".apkg", "application/octet-stream"),
-        (".pdf", "application/pdf"),
-    ):
-        path = DOWNLOAD_DIR / f"{token}{suffix}"
-        if path.exists():
-            name_file = DOWNLOAD_DIR / f"{token}.name"
-            filename = (
-                name_file.read_text().strip()
-                if name_file.exists()
-                else f"sight-text{suffix}"
-            )
-            return FileResponse(path, media_type=media_type, filename=filename)
-    raise HTTPException(status_code=404, detail="Download expired or not found.")

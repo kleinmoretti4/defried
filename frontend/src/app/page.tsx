@@ -13,12 +13,18 @@ type Block = {
   items?: string[];
 };
 
+type Download = {
+  filename: string;
+  media_type: string;
+  data_b64: string;
+};
+
 type DocumentResult = {
   kind: "document";
   mode: Mode;
   title: string;
   blocks: Block[];
-  download_url: string;
+  download: Download;
 };
 
 type AnkiResult = {
@@ -27,10 +33,23 @@ type AnkiResult = {
   deck_name: string;
   card_count: number;
   preview: { front: string; back: string }[];
-  download_url: string;
+  download: Download;
 };
 
 type Result = DocumentResult | AnkiResult;
+
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+
+function saveDownload(download: Download) {
+  const bytes = Uint8Array.from(atob(download.data_b64), (c) => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: download.media_type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = download.filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 const SAMPLE_TEXT = `Photosynthesis
 
@@ -48,6 +67,16 @@ export default function Home() {
   const [result, setResult] = useState<Result | null>(null);
   const [showHow, setShowHow] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const pickFile = (picked: File | null | undefined) => {
+    if (!picked) return;
+    if (picked.size > MAX_UPLOAD_BYTES) {
+      setError("That file is too large (4 MB max).");
+      return;
+    }
+    setError(null);
+    setFile(picked);
+  };
 
   const openPathway = (src: Source) => {
     setSource(src);
@@ -221,8 +250,7 @@ export default function Home() {
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
-                const dropped = e.dataTransfer.files?.[0];
-                if (dropped) setFile(dropped);
+                pickFile(e.dataTransfer.files?.[0]);
               }}
             >
               {file ? (
@@ -249,7 +277,7 @@ export default function Home() {
                 type="file"
                 accept={accept}
                 hidden
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => pickFile(e.target.files?.[0])}
               />
             </div>
 
@@ -300,13 +328,12 @@ export default function Home() {
                 {result.title} · {result.mode} transformation
               </span>
               <span className={styles.resultActions}>
-                <a
+                <button
                   className={styles.actionButton}
-                  href={result.download_url}
-                  download
+                  onClick={() => saveDownload(result.download)}
                 >
                   DOWNLOAD PDF
-                </a>
+                </button>
                 <button className={styles.ghostButton} onClick={reset}>
                   start over
                 </button>
@@ -349,13 +376,12 @@ export default function Home() {
                 {result.mode} transformation
               </span>
               <span className={styles.resultActions}>
-                <a
+                <button
                   className={styles.actionButton}
-                  href={result.download_url}
-                  download
+                  onClick={() => saveDownload(result.download)}
                 >
                   DOWNLOAD .APKG
-                </a>
+                </button>
                 <button className={styles.ghostButton} onClick={reset}>
                   start over
                 </button>
