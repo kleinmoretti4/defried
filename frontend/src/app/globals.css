@@ -1,0 +1,48 @@
+:root {
+  --paper: #ece5d3;
+  --paper-dark: #e0d6bd;
+  --card: #e8c96a;
+  --card-edge: #b89b3e;
+  --ink: #17171a;
+  --ink-soft: #3a3630;
+  --shadow: rgba(30, 25, 10, 0.45);
+  --accent: #1a2b4a;
+
+  /* Reader (dyslexia-friendly) palette */
+  --reader-bg: #faf3e0;
+  --reader-ink: #1a2b4a;
+  --reader-key-bg: #f2e0b8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(rgba(120, 100, 60, 0.08) 1px, transparent 1px),
+    radial-gradient(rgba(120, 100, 60, 0.05) 1px, transparent 1px);
+  background-size: 7px 7px, 11px 11px;
+  background-position: 0 0, 3px 5px;
+  color: var(--ink);
+  font-family: var(--font-mono-pixel), "Courier New", monospace;
+  font-size: 22px;
+  line-height: 1.35;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
