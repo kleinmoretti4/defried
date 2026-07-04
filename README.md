@@ -1,4 +1,4 @@
-# Clarity
+# Clarity: Documents through a new lens
 
 Clarity is a web app that takes in documents (.pdf, .docx, .txt or pasted
 text) and Anki decks (.apkg) and converts them to make them more dyslexia
