@@ -32,7 +32,7 @@ body {
   background-size: 7px 7px, 11px 11px;
   background-position: 0 0, 3px 5px;
   color: var(--ink);
-  font-family: var(--font-mono-pixel), "Open Dyslexic", monospace;
+  font-family: var(--font-mono-pixel), "Courier New", monospace;
   font-size: 22px;
   line-height: 1.35;
   min-height: 100vh;
