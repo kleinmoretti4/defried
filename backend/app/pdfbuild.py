@@ -4,6 +4,27 @@ from __future__ import annotations
 
 import fitz
 
+# PyMuPDF's built-in base-14 fonts miss many Unicode glyphs, so map smart
+# punctuation to ASCII equivalents before writing.
+_CHAR_MAP = str.maketrans(
+    {
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u2026": "...",
+        "\u00a0": " ",
+        "\u2022": "\u2022",  # bullet is supported, keep it
+    }
+)
+
+
+def _sanitize(text: str) -> str:
+    return text.translate(_CHAR_MAP)
+
+
 PAGE_WIDTH, PAGE_HEIGHT = fitz.paper_size("a4")
 MARGIN_X = 64
 MARGIN_TOP = 64
@@ -40,6 +61,7 @@ class _Builder:
         self.y = MARGIN_TOP
 
     def _write(self, text: str, style: dict, indent: float = 0, bg=None) -> None:
+        text = _sanitize(text)
         size = style["size"]
         line_height = size * LINE_FACTOR
         width = min(MAX_TEXT_WIDTH, PAGE_WIDTH - 2 * MARGIN_X) - indent
