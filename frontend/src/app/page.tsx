@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import styles from "./page.module.css";
 
 type Source = "document" | "anki";
@@ -40,6 +40,33 @@ type Result = DocumentResult | AnkiResult;
 
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
+/* The OpenDyslexic preference lives in localStorage so it survives
+   reloads; useSyncExternalStore keeps React in sync with it. */
+const DYSLEXIC_FONT_KEY = "sight-text:open-dyslexic";
+const DYSLEXIC_FONT_EVENT = "sight-text:open-dyslexic-change";
+
+function subscribeToFontPref(callback: () => void) {
+  window.addEventListener(DYSLEXIC_FONT_EVENT, callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener(DYSLEXIC_FONT_EVENT, callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function useDyslexicFont() {
+  const enabled = useSyncExternalStore(
+    subscribeToFontPref,
+    () => localStorage.getItem(DYSLEXIC_FONT_KEY) === "1",
+    () => false,
+  );
+  const toggle = () => {
+    localStorage.setItem(DYSLEXIC_FONT_KEY, enabled ? "0" : "1");
+    window.dispatchEvent(new Event(DYSLEXIC_FONT_EVENT));
+  };
+  return { enabled, toggle };
+}
+
 function saveDownload(download: Download) {
   const bytes = Uint8Array.from(atob(download.data_b64), (c) => c.charCodeAt(0));
   const blob = new Blob([bytes], { type: download.media_type });
@@ -66,6 +93,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [showHow, setShowHow] = useState(false);
+  const { enabled: dyslexicFont, toggle: toggleDyslexicFont } =
+    useDyslexicFont();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const pickFile = (picked: File | null | undefined) => {
@@ -329,6 +358,13 @@ export default function Home() {
               </span>
               <span className={styles.resultActions}>
                 <button
+                  className={styles.fontToggle}
+                  aria-pressed={dyslexicFont}
+                  onClick={toggleDyslexicFont}
+                >
+                  OpenDyslexic font: {dyslexicFont ? "on" : "off"}
+                </button>
+                <button
                   className={styles.actionButton}
                   onClick={() => saveDownload(result.download)}
                 >
@@ -339,7 +375,11 @@ export default function Home() {
                 </button>
               </span>
             </div>
-            <article className={styles.reader}>
+            <article
+              className={`${styles.reader} ${
+                dyslexicFont ? styles.dyslexicFont : ""
+              }`}
+            >
               {result.blocks.map((block, i) => {
                 switch (block.type) {
                   case "heading":
@@ -377,6 +417,13 @@ export default function Home() {
               </span>
               <span className={styles.resultActions}>
                 <button
+                  className={styles.fontToggle}
+                  aria-pressed={dyslexicFont}
+                  onClick={toggleDyslexicFont}
+                >
+                  OpenDyslexic font: {dyslexicFont ? "on" : "off"}
+                </button>
+                <button
                   className={styles.actionButton}
                   onClick={() => saveDownload(result.download)}
                 >
@@ -392,7 +439,12 @@ export default function Home() {
             </p>
             <div className={styles.cardPreviewList}>
               {result.preview.map((card, i) => (
-                <div key={i} className={styles.flashcard}>
+                <div
+                  key={i}
+                  className={`${styles.flashcard} ${
+                    dyslexicFont ? styles.dyslexicFont : ""
+                  }`}
+                >
                   <div className={styles.flashFront}>{card.front}</div>
                   {card.back && (
                     <div className={styles.flashBack}>{card.back}</div>
@@ -436,7 +488,8 @@ export default function Home() {
               structure and scannable headings.
             </p>
             <p className={styles.howText}>
-              3. Read the result in the accessible reader, or download it as a
+              3. Read the result in the accessible reader — with an optional
+              OpenDyslexic font toggle if you prefer it — or download it as a
               dyslexia-friendly PDF or Anki deck.
             </p>
             <button

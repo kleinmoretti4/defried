@@ -298,8 +298,31 @@
 
 .resultActions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+}
+
+.fontToggle {
+  background: transparent;
+  border: 2px dashed rgba(60, 45, 10, 0.4);
+  border-radius: 10px;
+  padding: 10px 18px;
+  color: var(--ink-soft);
+  font-size: 18px;
+}
+
+.fontToggle[aria-pressed="true"] {
+  background: var(--reader-bg);
+  border-style: solid;
+  color: var(--reader-ink);
+}
+
+/* Optional OpenDyslexic typeface for readers who prefer it. Tighter
+   letter spacing compensates for the font's wide, weighted letterforms. */
+.dyslexicFont {
+  font-family: var(--font-dyslexic), Verdana, Arial, sans-serif;
+  letter-spacing: 0.01em;
 }
 
 /* Dyslexia-friendly reader: Verdana, generous spacing, left-aligned,
