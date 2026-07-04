@@ -37,9 +37,9 @@ const openDyslexic = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Sight-Text",
+  title: "Clarity",
   description:
-    "Sight-text takes in documents and Anki decks and converts them to make them more dyslexia friendly.",
+    "Clarity takes in documents and Anki decks and converts them to make them more dyslexia friendly.",
 };
 
 export default function RootLayout({

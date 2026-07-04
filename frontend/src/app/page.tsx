@@ -25,6 +25,7 @@ type DocumentResult = {
   title: string;
   blocks: Block[];
   download: Download;
+  download_dyslexic: Download;
 };
 
 type AnkiResult = {
@@ -34,6 +35,7 @@ type AnkiResult = {
   card_count: number;
   preview: { front: string; back: string }[];
   download: Download;
+  download_dyslexic: Download;
 };
 
 type Result = DocumentResult | AnkiResult;
@@ -42,8 +44,8 @@ const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 /* The OpenDyslexic preference lives in localStorage so it survives
    reloads; useSyncExternalStore keeps React in sync with it. */
-const DYSLEXIC_FONT_KEY = "sight-text:open-dyslexic";
-const DYSLEXIC_FONT_EVENT = "sight-text:open-dyslexic-change";
+const DYSLEXIC_FONT_KEY = "clarity:open-dyslexic";
+const DYSLEXIC_FONT_EVENT = "clarity:open-dyslexic-change";
 
 function subscribeToFontPref(callback: () => void) {
   window.addEventListener(DYSLEXIC_FONT_EVENT, callback);
@@ -176,16 +178,25 @@ export default function Home() {
   const accept = source === "anki" ? ".apkg" : ".pdf,.doc,.docx,.txt";
 
   return (
-    <div className={styles.page}>
+    <div
+      className={`${styles.page} ${dyslexicFont ? styles.dyslexicSite : ""}`}
+    >
       <header className={styles.header}>
         <h1 className={styles.title} onClick={reset}>
-          SIGHT-TEXT
+          CLARITY
         </h1>
         <p className={styles.tagline}>
-          Sight-text is a tool that takes in documents and converts them to
+          Clarity is a tool that takes in documents and converts them to
           make them more dyslexia friendly{" "}
           <span aria-hidden="true">🤌</span>
         </p>
+        <button
+          className={styles.fontToggle}
+          aria-pressed={dyslexicFont}
+          onClick={toggleDyslexicFont}
+        >
+          OpenDyslexic font: {dyslexicFont ? "on" : "off"}
+        </button>
       </header>
 
       <main className={styles.main}>
@@ -358,15 +369,14 @@ export default function Home() {
               </span>
               <span className={styles.resultActions}>
                 <button
-                  className={styles.fontToggle}
-                  aria-pressed={dyslexicFont}
-                  onClick={toggleDyslexicFont}
-                >
-                  OpenDyslexic font: {dyslexicFont ? "on" : "off"}
-                </button>
-                <button
                   className={styles.actionButton}
-                  onClick={() => saveDownload(result.download)}
+                  onClick={() =>
+                    saveDownload(
+                      dyslexicFont && result.download_dyslexic
+                        ? result.download_dyslexic
+                        : result.download,
+                    )
+                  }
                 >
                   DOWNLOAD PDF
                 </button>
@@ -417,15 +427,14 @@ export default function Home() {
               </span>
               <span className={styles.resultActions}>
                 <button
-                  className={styles.fontToggle}
-                  aria-pressed={dyslexicFont}
-                  onClick={toggleDyslexicFont}
-                >
-                  OpenDyslexic font: {dyslexicFont ? "on" : "off"}
-                </button>
-                <button
                   className={styles.actionButton}
-                  onClick={() => saveDownload(result.download)}
+                  onClick={() =>
+                    saveDownload(
+                      dyslexicFont && result.download_dyslexic
+                        ? result.download_dyslexic
+                        : result.download,
+                    )
+                  }
                 >
                   DOWNLOAD .APKG
                 </button>
@@ -457,7 +466,7 @@ export default function Home() {
       </main>
 
       <footer className={styles.footer}>
-        <a href="mailto:hello@sight-text.example">Contact</a>
+        <a href="mailto:hello@clarity.example">Contact</a>
         <button className={styles.footerLink} onClick={() => setShowHow(true)}>
           How it works
         </button>
@@ -488,9 +497,10 @@ export default function Home() {
               structure and scannable headings.
             </p>
             <p className={styles.howText}>
-              3. Read the result in the accessible reader — with an optional
-              OpenDyslexic font toggle if you prefer it — or download it as a
-              dyslexia-friendly PDF or Anki deck.
+              3. Read the result in the accessible reader, or download it as
+              a dyslexia-friendly PDF or Anki deck. The OpenDyslexic toggle
+              at the top switches the whole site — and your downloads — to
+              the OpenDyslexic typeface if you prefer it.
             </p>
             <button
               className={styles.actionButton}

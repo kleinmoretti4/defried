@@ -2,7 +2,17 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import fitz
+
+FONT_DIR = Path(__file__).parent / "fonts"
+
+# Optional OpenDyslexic typeface, embedded when the reader asks for it.
+DYSLEXIC_FONTS = {
+    "regular": ("odyslexic", str(FONT_DIR / "OpenDyslexic-Regular.otf")),
+    "bold": ("odyslexicbd", str(FONT_DIR / "OpenDyslexic-Bold.otf")),
+}
 
 # PyMuPDF's built-in base-14 fonts miss many Unicode glyphs, so map smart
 # punctuation to ASCII equivalents before writing.
@@ -49,11 +59,24 @@ STYLES = {
 
 
 class _Builder:
-    def __init__(self) -> None:
+    def __init__(self, dyslexic_font: bool = False) -> None:
         self.doc = fitz.open()
         self.page = None
         self.y = MARGIN_TOP
+        self.dyslexic_font = dyslexic_font
         self._new_page()
+
+    def _font_args(self, style: dict) -> dict:
+        """Map a style's base-14 font to insert_textbox font arguments.
+
+        When the OpenDyslexic variant is requested, bold styles (hebo)
+        use OpenDyslexic-Bold and everything else uses the regular cut.
+        """
+        if not self.dyslexic_font:
+            return {"fontname": style["font"]}
+        weight = "bold" if style["font"] == "hebo" else "regular"
+        fontname, fontfile = DYSLEXIC_FONTS[weight]
+        return {"fontname": fontname, "fontfile": fontfile}
 
     def _new_page(self) -> None:
         self.page = self.doc.new_page(width=PAGE_WIDTH, height=PAGE_HEIGHT)
@@ -76,10 +99,10 @@ class _Builder:
         spare = shape.insert_textbox(
             measure,
             text,
-            fontname=style["font"],
             fontsize=size,
             lineheight=LINE_FACTOR,
             color=TEXT_COLOR,
+            **self._font_args(style),
         )
         needed = measure.height - spare if spare >= 0 else line_height * 2
         # Do not commit the measuring shape; redo on the right page.
@@ -101,11 +124,11 @@ class _Builder:
         self.page.insert_textbox(
             target,
             text,
-            fontname=style["font"],
             fontsize=size,
             lineheight=LINE_FACTOR,
             color=TEXT_COLOR,
             align=fitz.TEXT_ALIGN_LEFT,
+            **self._font_args(style),
         )
         self.y += needed + style["space_after"]
 
@@ -125,8 +148,8 @@ class _Builder:
         return self.doc.tobytes()
 
 
-def build_pdf(blocks: list[dict]) -> bytes:
-    builder = _Builder()
+def build_pdf(blocks: list[dict], dyslexic_font: bool = False) -> bytes:
+    builder = _Builder(dyslexic_font=dyslexic_font)
     for block in blocks:
         builder.add_block(block)
     return builder.to_bytes()

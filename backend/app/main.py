@@ -1,4 +1,4 @@
-"""Sight-Text API: converts documents and Anki decks to dyslexia-friendly formats."""
+"""Clarity API: converts documents and Anki decks to dyslexia-friendly formats."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from .transform import (
     full_transform_document,
 )
 
-app = FastAPI(title="Sight-Text API")
+app = FastAPI(title="Clarity API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -108,15 +108,22 @@ async def convert_document(
         except GeminiError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    pdf_bytes = build_pdf(blocks)
+    # Both font variants are generated up front so the frontend's
+    # OpenDyslexic toggle keeps working after conversion without
+    # another round-trip.
     return {
         "kind": "document",
         "mode": mode,
         "title": title,
         "blocks": blocks,
         "download": _inline_download(
-            pdf_bytes,
+            build_pdf(blocks),
             f"{_safe_name(title)}-dyslexia-friendly.pdf",
+            "application/pdf",
+        ),
+        "download_dyslexic": _inline_download(
+            build_pdf(blocks, dyslexic_font=True),
+            f"{_safe_name(title)}-dyslexia-friendly-opendyslexic.pdf",
             "application/pdf",
         ),
     }
@@ -157,6 +164,11 @@ async def convert_anki(
         build_apkg(new_name, cards, str(out_path))
         apkg_bytes = out_path.read_bytes()
 
+        od_path = Path(tmp) / "deck-opendyslexic.apkg"
+        build_apkg(new_name, cards, str(od_path), dyslexic_font=True)
+        apkg_dyslexic_bytes = od_path.read_bytes()
+
+    base_name = _safe_name(Path(file.filename).stem)
     return {
         "kind": "anki",
         "mode": mode,
@@ -165,7 +177,12 @@ async def convert_anki(
         "preview": cards[:20],
         "download": _inline_download(
             apkg_bytes,
-            f"{_safe_name(Path(file.filename).stem)}-dyslexia-friendly.apkg",
+            f"{base_name}-dyslexia-friendly.apkg",
+            "application/octet-stream",
+        ),
+        "download_dyslexic": _inline_download(
+            apkg_dyslexic_bytes,
+            f"{base_name}-dyslexia-friendly-opendyslexic.apkg",
             "application/octet-stream",
         ),
     }
