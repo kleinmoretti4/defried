@@ -58,57 +58,6 @@ npm run dev
 Open http://localhost:3000. The Next.js dev server proxies `/api/*` to the
 backend (set `BACKEND_URL` to override the default `http://localhost:8000`).
 
-## Deploying to Vercel
-
-The app deploys as **two Vercel projects** from this one repo.
-
-### 1. Backend project (FastAPI)
-
-1. In [vercel.com/new](https://vercel.com/new), import this repo and set
-   **Root Directory** to `backend`. Vercel auto-detects FastAPI (it finds
-   the `app` instance at the recognized `app/main.py` entrypoint) and runs
-   the whole API as a single Python function.
-2. Add the `GEMINI_API_KEY` environment variable (needed for Full
-   Transformation).
-3. Deploy, and note the deployment URL (e.g.
-   `https://clarity-api.vercel.app`).
-
-`backend/vercel.json` sets `maxDuration: 120` so long Gemini rewrites don't
-time out, and `.python-version` pins Python 3.12.
-
-### 2. Frontend project (Next.js)
-
-1. Import the same repo again as a second project with **Root Directory**
-   set to `frontend`.
-2. Add a `BACKEND_URL` environment variable pointing at the backend
-   deployment URL from step 1.
-3. Deploy. The Next.js rewrite proxies `/api/*` to the backend, so the
-   frontend needs no other configuration.
-
-Equivalent CLI flow:
-
-```bash
-npm i -g vercel && vercel login
-
-cd backend
-vercel link && vercel env add GEMINI_API_KEY production
-vercel --prod        # note the URL
-
-cd ../frontend
-vercel link && vercel env add BACKEND_URL production   # paste backend URL
-vercel --prod
-```
-
-After the first deploy, every push to `main` deploys production and every
-branch push gets a preview URL automatically.
-
-### Serverless constraints
-
-- Uploads are capped at 4 MB (Vercel functions limit request bodies to
-  ~4.5 MB). The backend and frontend both enforce this.
-- Converted files are returned inline in the JSON response (base64) instead
-  of being staged on disk, because serverless instances don't share a
-  filesystem between requests.
 
 ## API
 
