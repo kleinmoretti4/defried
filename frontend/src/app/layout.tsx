@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Silkscreen, VT323 } from "next/font/google";
 import localFont from "next/font/local";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const silkscreen = Silkscreen({
@@ -52,7 +53,10 @@ export default function RootLayout({
       lang="en"
       className={`${silkscreen.variable} ${vt323.variable} ${openDyslexic.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
