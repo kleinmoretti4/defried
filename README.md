@@ -23,6 +23,9 @@ A site-wide toggle switches the interface — and the downloaded PDF or
 `.apkg` — to the OpenDyslexic typeface for readers who prefer it (the font
 is embedded in both download formats).
 
+## Website (Hosted on Vercel)
+https://sight-text.vercel.app/
+
 ## Stack
 
 - **Frontend:** Next.js (App Router, TypeScript)
