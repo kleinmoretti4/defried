@@ -26,6 +26,9 @@ is embedded in both download formats).
 ## Website (Hosted on Vercel)
 https://sight-text.vercel.app/
 
+## Initial high-fidelity prototype created in Figma
+https://www.figma.com/design/SOfNgbkDWoOLq4mK3JDNJG/Sight-Text?node-id=0-1&t=zbFHMwuKfC049sJj-1
+
 ## Stack
 
 - **Frontend:** Next.js (App Router, TypeScript)
